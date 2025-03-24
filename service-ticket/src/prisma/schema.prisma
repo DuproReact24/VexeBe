@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model bus {
+  id              Int              @id @default(autoincrement())
+  bus_operator_id Int
+  license_plate   String           @unique @db.VarChar(255)
+  seat_capacity   Int
+  price           Int
+  bus_operators   bus_operators    @relation(fields: [bus_operator_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bus_operator")
+  pickup_drivers  pickup_drivers[]
+  trips           trips[]
+}
+
+model bus_operators {
+  id              Int               @id @default(autoincrement())
+  fullname        String            @db.VarChar(255)
+  address         String?
+  phone           Int?
+  email           String            @unique @db.VarChar(255)
+  account         String            @unique @db.VarChar(255)
+  password        String            @db.VarChar(255)
+  city_id         Int?
+  bus             bus[]
+  city            city?             @relation(fields: [city_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bus_operators_city")
+  rents_driver    rents_driver[]
+  ticket_bookings ticket_bookings[]
+  trips           trips[]
+}
+
+model city {
+  id            Int             @id @default(autoincrement())
+  name          String          @unique @db.VarChar(255)
+  bus_operators bus_operators[]
+  point         point[]
+}
+
+model customers {
+  id              Int               @id @default(autoincrement())
+  fullname        String            @db.VarChar(255)
+  address         String?
+  phone           String?
+  account         String            @unique @db.VarChar
+  password        String            @db.VarChar
+  id_role         Int?              @default(2)
+  roles           roles?            @relation(fields: [id_role], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_customers_role")
+  ticket_bookings ticket_bookings[]
+}
+
+model history_ticket {
+  id           Int      @id @default(autoincrement())
+  customer_id  Int
+  seat         Json
+  booking_time DateTime @db.Date
+  status       Boolean
+  id_pick_up   Int?
+  id_drop_off  Int?
+  email        String?  @db.VarChar(255)
+  phone        String?
+}
+
+model location {
+  id                                                    Int               @id @default(autoincrement())
+  name                                                  String            @db.VarChar(255)
+  address                                               String
+  ticket_bookings_ticket_bookings_id_drop_offTolocation ticket_bookings[] @relation("ticket_bookings_id_drop_offTolocation")
+  ticket_bookings_ticket_bookings_id_pick_upTolocation  ticket_bookings[] @relation("ticket_bookings_id_pick_upTolocation")
+  trip_routes_trip_routes_from_location_idTolocation    trip_routes[]     @relation("trip_routes_from_location_idTolocation")
+  trip_routes_trip_routes_to_location_idTolocation      trip_routes[]     @relation("trip_routes_to_location_idTolocation")
+  trips_trips_from_localTolocation                      trips[]           @relation("trips_from_localTolocation")
+  trips_trips_to_localTolocation                        trips[]           @relation("trips_to_localTolocation")
+}
+
+model pickup_drivers {
+  id       Int     @id @default(autoincrement())
+  fullname String  @db.VarChar(255)
+  phone    Int?
+  email    String? @unique @db.VarChar(255)
+  account  String  @unique @db.VarChar(255)
+  password String  @db.VarChar(255)
+  bus_id   Int?
+  bus      bus?    @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pickup_drivers_bus")
+}
+
+model point {
+  id      Int    @id @default(autoincrement())
+  name    String @db.VarChar(255)
+  city_id Int
+  city    city   @relation(fields: [city_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_point_city")
+}
+
+model rents_driver {
+  id      Int           @id @default(autoincrement())
+  name    String        @db.VarChar(255)
+  price   Int
+  city_id Int
+  address String?
+  city    bus_operators @relation(fields: [city_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rents_driver_city")
+}
+
+model roles {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique @db.VarChar(255)
+  customers customers[]
+}
+
+model ticket_bookings {
+  id                                             Int           @id @default(autoincrement())
+  customer_id                                    Int
+  seat                                           Json
+  booking_time                                   DateTime      @db.Date
+  status                                         Boolean
+  id_pick_up                                     Int?
+  id_drop_off                                    Int?
+  email                                          String?       @db.VarChar(255)
+  phone                                          String?
+  id_busop                                       Int
+  customers                                      customers     @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ticket_bookings_customer")
+  location_ticket_bookings_id_drop_offTolocation location?     @relation("ticket_bookings_id_drop_offTolocation", fields: [id_drop_off], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ticket_bookings_dropoff")
+  location_ticket_bookings_id_pick_upTolocation  location?     @relation("ticket_bookings_id_pick_upTolocation", fields: [id_pick_up], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ticket_bookings_pickup")
+  bus_operators                                  bus_operators @relation(fields: [id_busop], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model trip_routes {
+  id                                              Int      @id @default(autoincrement())
+  trip_id                                         Int
+  from_location_id                                Int
+  to_location_id                                  Int
+  location_trip_routes_from_location_idTolocation location @relation("trip_routes_from_location_idTolocation", fields: [from_location_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_trip_routes_from")
+  location_trip_routes_to_location_idTolocation   location @relation("trip_routes_to_location_idTolocation", fields: [to_location_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_trip_routes_to")
+  trips                                           trips    @relation(fields: [trip_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_trip_routes_trip")
+}
+
+model trips {
+  id                                  Int           @id @default(autoincrement())
+  bus_operator_id                     Int
+  departure_time                      DateTime?     @default(now()) @db.Time(6)
+  arrival_time                        DateTime?     @default(now()) @db.Time(6)
+  to_local                            Int
+  from_local                          Int
+  price                               Float?        @db.Real
+  id_bus                              Int?
+  date                                DateTime?     @db.Date
+  trip_routes                         trip_routes[]
+  bus_operators                       bus_operators @relation(fields: [bus_operator_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_trips_bus_operator")
+  location_trips_from_localTolocation location      @relation("trips_from_localTolocation", fields: [from_local], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bus                                 bus?          @relation(fields: [id_bus], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  location_trips_to_localTolocation   location      @relation("trips_to_localTolocation", fields: [to_local], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
